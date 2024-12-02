@@ -3623,6 +3623,16 @@ class Epochs(BaseEpochs):
             )
         sfreq = self._raw.info["sfreq"]
         event_samp = self.events[idx, 0]
+        first_samp = self._raw.first_samp
+        n_samples = self._raw.n_times
+        if event_samp < first_samp:
+            warn(f"Event {idx} (sample number {event_samp}) is before the first sample "
+                 f"of the raw data ({first_samp}).", RuntimeWarning)
+            return None
+        elif event_samp + self._raw_times[-1] * sfreq >= first_samp + n_samples:
+            warn(f"Event {idx} (sample number {event_samp}) is outside the time range "
+                 f"of the raw data.", RuntimeWarning)
+            return None
         # Read a data segment from "start" to "stop" in samples
         first_samp = self._raw.first_samp
         start = int(round(event_samp + self._raw_times[0] * sfreq))

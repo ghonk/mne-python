@@ -5256,6 +5256,21 @@ def _get_empty_parametrize():
 
 
 @pytest.mark.parametrize(**_get_empty_parametrize())
+def test_epochs_out_of_bounds_events():
+    """Test epochs with out-of-bounds events."""
+    raw, events = _get_data()[:2]
+    # Add events that are out of bounds
+    events_oob = np.concatenate(
+        (events, np.array([[raw.first_samp - 1, 0, 1],
+                           [raw.last_samp + 1, 0, 1]]))
+    )
+    with pytest.warns(RuntimeWarning, match='Event 7 \(sample number 668\) is before the first sample'):
+        epochs = mne.Epochs(raw, events_oob, event_id, tmin, tmax, preload=True)
+    assert len(epochs) == len(events)
+    with pytest.warns(RuntimeWarning, match='Event 8 \(sample number 33875\) is outside the time range'):
+        epochs.get_data()
+
+
 def test_empty_error(method, epochs_empty):
     """Test that a RuntimeError is raised when certain methods are called."""
     if method[0] == "to_data_frame":
