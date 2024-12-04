@@ -5262,3 +5262,30 @@ def test_empty_error(method, epochs_empty):
         pytest.importorskip("pandas")
     with pytest.raises(RuntimeError, match="is empty."):
         getattr(epochs_empty.copy(), method[0])(**method[1])
+
+
+@testing.requires_testing_data
+def test_epochs_out_of_bounds_warning():
+    """Test that a warning is issued for out-of-bounds events."""
+    import mne
+
+    # Generate random data
+    data = np.random.randn(5, 1000)
+
+    # Create MNE info structure
+    ch_names = [f'EEG {i+1}' for i in range(5)]  # Channel names
+    info = mne.create_info(ch_names=ch_names, sfreq=100)
+
+    # Create RawArray
+    raw = mne.io.RawArray(data, info, first_samp=150)
+
+    events = np.array([[50, 0, 1],  # before first_samp
+                       [500, 0, 2],  # works
+                       [1100, 0, 3]])  # outside of data
+
+    with pytest.warns(RuntimeWarning, match='Event 1 (sample number 50) is out of bounds.'):
+        mne.Epochs(raw, events=events, preload=True)
+
+    with pytest.warns(RuntimeWarning, match='Event 3 (sample number 1100) is out of bounds.'):
+        mne.Epochs(raw, events=events, preload=True)
+

@@ -3576,6 +3576,18 @@ class Epochs(BaseEpochs):
                 raw, events, event_id, annotations, on_missing
             )
 
+        # Check for out-of-bounds events
+        if events is not None:
+            sfreq = raw.info['sfreq']
+            first_samp = raw.first_samp
+            for idx in [0, -1]:
+                if 0 <= idx < len(events):
+                    event_samp = events[idx, 0]
+                    start = int(round(event_samp + tmin * sfreq)) - first_samp
+                    stop = start + int(round((tmax - tmin) * sfreq)) + 1
+                    if raw._check_bad_segment(start, stop, picks, start, stop, reject_by_annotation) is None:
+                        warn(f'Event {idx + 1} (sample number {event_samp}) is out of bounds.')
+
         # call BaseEpochs constructor
         super().__init__(
             info,
