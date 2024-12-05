@@ -5262,3 +5262,32 @@ def test_empty_error(method, epochs_empty):
         pytest.importorskip("pandas")
     with pytest.raises(RuntimeError, match="is empty."):
         getattr(epochs_empty.copy(), method[0])(**method[1])
+
+
+def test_epochs_out_of_bounds_warning():
+    """Test warning for out-of-bounds events."""
+    data = np.random.randn(5, 1000)
+    info = mne.create_info(ch_names=[f'EEG {i+1}' for i in range(5)], sfreq=100)
+    raw = mne.io.RawArray(data, info, first_samp=150)
+    events = np.array([[50, 0, 1],
+                       [500, 0, 2],
+                       [1100, 0, 3]])
+    with pytest.warns(RuntimeWarning, match="Out of bounds event sample numbers found, 100 samples exceeding data range."):
+        mne.Epochs(raw, events=events, preload=True)
+
+    # Test with one event exceeding the data range
+    events = np.array([[500,0,1], [1100,0,1]])
+    with pytest.warns(RuntimeWarning, match="Out of bounds event sample numbers found, 100 samples exceeding data range."):
+        mne.Epochs(raw, events=events, preload=True)
+
+    # Test with first_samp = 0
+    raw = mne.io.RawArray(data, info)
+    events = np.array([[500,0,1], [1100,0,1]])
+    with pytest.warns(RuntimeWarning, match="Out of bounds event sample numbers found, 100 samples exceeding data range."):
+        mne.Epochs(raw, events=events, preload=True)
+
+    """Test that a RuntimeError is raised when certain methods are called."""
+    if method[0] == "to_data_frame":
+        pytest.importorskip("pandas")
+    with pytest.raises(RuntimeError, match="is empty."):
+        getattr(epochs_empty.copy(), method[0])(**method[1])

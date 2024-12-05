@@ -552,6 +552,9 @@ class BaseRaw(
         """
         if start < 0:
             return None
+        if stop > self.last_samp - self.first_samp + 1:
+            warn(f"Out of bounds event sample numbers found, {stop - (self.last_samp - self.first_samp + 1)} samples exceeding data range. These epochs will be dropped.")
+            return None
         if reject_by_annotation and len(self.annotations) > 0:
             annot = self.annotations
             sfreq = self.info["sfreq"]
