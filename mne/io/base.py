@@ -551,7 +551,8 @@ class BaseRaw(
             segment.
         """
         if start < 0:
-            return None
+            warn(f"Event sample number {start + self.first_samp} is before the start of the data (first sample: {self.first_samp}).")
+            return "OUT_OF_BOUNDS"
         if reject_by_annotation and len(self.annotations) > 0:
             annot = self.annotations
             sfreq = self.info["sfreq"]

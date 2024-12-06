@@ -1749,6 +1749,9 @@ class BaseEpochs(
                     epoch = self._project_epoch(epoch_noproj)
 
                 epoch_out = epoch_noproj if self._do_delayed_proj else epoch
+                if epoch_noproj == "OUT_OF_BOUNDS":
+                    drop_log[sel] = drop_log[sel] + ("OUT_OF_BOUNDS",)
+                    continue
                 is_good, bad_tuple = self._is_good_epoch(epoch, verbose=verbose)
                 if not is_good:
                     assert isinstance(bad_tuple, tuple)
