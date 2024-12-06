@@ -3,6 +3,26 @@
 # Copyright the MNE-Python contributors.
 
 import pickle
+from mne import create_info, Epochs
+from mne.io import RawArray
+import numpy as np
+
+
+def test_ignored_bad_epochs():
+    """Test that bad epochs from ignored conditions are marked as IGNORED."""
+    data = np.zeros((10, 1, 100))
+    info = create_info(1, 100, 'eeg')
+    events = np.array([[0, 0, 1], [100, 0, 2], [200, 0, 1], [300, 0, 2],
+                       [400, 0, 1], [500, 0, 2], [600, 0, 1], [700, 0, 2],
+                       [800, 0, 1], [900, 0, 2]])
+    raw = RawArray(data, info)
+    epochs = Epochs(raw, events, event_id={'stim': 1, 'blank': 2}, tmin=0, tmax=0.099,
+                    reject=dict(eeg=1e-6), preload=True)
+    epochs_stim = epochs['stim']
+    epochs_blank = epochs['blank']
+    assert all(log == ('IGNORED',) for log in epochs_blank.drop_log)
+
+
 from copy import deepcopy
 from datetime import timedelta
 from functools import partial

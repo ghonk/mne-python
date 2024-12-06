@@ -511,28 +511,31 @@ class BaseEpochs(
                     f"{selection.shape}"
                 )
             self.selection = selection
-            if drop_log is None:
-                self.drop_log = tuple(
-                    () if k in self.selection else ("IGNORED",)
-                    for k in range(max(len(self.events), max(self.selection) + 1))
-                )
-            else:
-                self.drop_log = drop_log
-
             self.events = self.events[selected]
 
             (
                 self.events,
                 self.event_id,
                 self.selection,
-                self.drop_log,
+                drop_log,
             ) = _handle_event_repeated(
                 self.events,
                 self.event_id,
                 event_repeated,
                 self.selection,
-                self.drop_log,
+                drop_log,
             )
+            self.drop_log = drop_log
+
+            if drop_log is None:
+                max_len = max(len(self.events), max(self.selection) + 1)
+                self.drop_log = list(self.drop_log)
+                for k in range(max_len):
+                    if k not in self.selection and len(self.drop_log[k]) == 0:
+                        self.drop_log[k] = ("IGNORED",)
+                self.drop_log = tuple(self.drop_log)
+
+
 
             # then subselect
             sub = np.where(np.isin(selection, self.selection))[0]
