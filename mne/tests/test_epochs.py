@@ -1053,6 +1053,21 @@ def test_epochs_from_annotations():
         Epochs(raw, event_id=["1", "foo"], on_missing="warn")
 
 
+def test_epochs_out_of_bounds_warning():
+    """Test out of bounds warning in epochs."""
+    data = np.random.randn(5, 1000)
+    info = mne.create_info(ch_names=5, sfreq=100)
+    raw = mne.io.RawArray(data, info, first_samp=150)
+    events = np.array([[50, 0, 1], [500, 0, 2], [1100, 0, 3]])
+
+    with pytest.warns(RuntimeWarning, match="Event sample number 50 is before the start of the data \(first sample: 150\)\."):
+        epochs = mne.Epochs(raw, events=events, preload=True)
+
+    assert "OUT_OF_BOUNDS" in epochs.drop_log[0]
+
+
+
+
 def test_epochs_hash():
     """Test epoch hashing."""
     raw, events = _get_data()[:2]
