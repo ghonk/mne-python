@@ -480,6 +480,13 @@ class BaseEpochs(
                         f"events array values must not exceed {INT32_MAX}, "
                         f"got {events_max}"
                     )
+                if raw is not None:
+                  if np.any((events[:, 0] < raw.first_samp) | (events[:, 0] > (raw.first_samp + raw.n_samples))):
+                    warn(
+                        "The events array contains sample numbers that are out of "
+                        "bounds. These will be dropped.",
+                        RuntimeWarning
+                        )
         event_id = _check_event_id(event_id, events)
         self.event_id = event_id
         del event_id
@@ -3652,7 +3659,13 @@ class Epochs(BaseEpochs):
             reject_stop,
             self.reject_by_annotation,
         )
+
+        if data is not None:
+            if (start < self._raw.first_samp or stop > (self._raw.first_samp + self._raw.n_samples)):
+                return None
+
         return data
+
 
 
 @fill_doc

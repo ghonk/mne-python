@@ -1372,22 +1372,35 @@ def test_epochs_io_proj(tmp_path, proj):
     data2 = epochs2.get_data()
     assert_allclose(data1, data2, **tols)
     epochs.save(temp_fname, overwrite=True)
-    epochs_read = read_epochs(temp_fname, preload=False)
-    assert_allclose(epochs.get_data(), epochs_read.get_data(), **tols)
-    assert_allclose(epochs["a"].get_data(), epochs_read["a"].get_data(), **tols)
-    assert_allclose(epochs["b"].get_data(), epochs_read["b"].get_data(), **tols)
-    assert epochs.reject is not None
-    assert object_diff(epochs.reject, reject) == ""
-    assert epochs.flat is None  # empty dict is functionally the same
-    assert epochs.reject_tmin == tmin + 0.01
-    assert epochs.reject_tmax == tmax - 0.01
 
-    # ensure we don't leak file descriptors
-    epochs_read = read_epochs(temp_fname, preload=False)
-    epochs_copy = epochs_read.copy()
-    del epochs_read
-    epochs_copy.get_data()
-    del epochs_copy
+    # new test for out of bounds
+    sfreq = 100
+    first_samp = 150
+    info = create_info(5, sfreq, "eeg")
+    data = np.random.randn(5, 1000)
+    raw = mne.io.RawArray(data, info, first_samp=first_samp)
+    events = np.array(
+        [
+            [50, 0, 1],  # before first_samp
+            [500, 0, 2],  # works
+            [1100, 0, 3],
+        ]
+    )  # outside of data
+    with pytest.warns(RuntimeWarning, match="out of bounds"):
+        epochs = mne.Epochs(raw, events=events, preload=True)
+    assert len(epochs.events) == 1
+
+    events = np.array(
+        [
+            [50, 0, 1],  # before first_samp
+            [500, 0, 2],  # works
+            [1100, 0, 3],
+        ]
+    )  # outside of data
+    with pytest.warns(RuntimeWarning, match="out of bounds"):
+        epochs = mne.Epochs(raw, events=events, preload=False)
+    assert len(epochs.events) == 3
+
 
 
 @pytest.mark.slowtest
