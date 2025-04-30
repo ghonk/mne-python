@@ -1743,6 +1743,11 @@ class BaseEpochs(
                         epoch = self._data[idx]
                 else:  # from disk
                     epoch_noproj = self._get_epoch_from_raw(idx)
+                    if epoch_noproj == "BAD_EPOCH_WINDOW":
+                        logger.warning(
+                            f"Epoch index {idx} (event sample {self.events[idx, 0]}) is "
+                            f"out of bounds and will be dropped."
+                        )
                     epoch_noproj = self._detrend_offset_decim(
                         epoch_noproj, detrend_picks
                     )
@@ -3628,6 +3633,10 @@ class Epochs(BaseEpochs):
         start = int(round(event_samp + self._raw_times[0] * sfreq))
         start -= first_samp
         stop = start + len(self._raw_times)
+
+            # Check if the epoch window is outside the raw data bounds
+            if start < 0 or stop > self._raw.n_times:
+                return "BAD_EPOCH_WINDOW"
 
         # reject_tmin, and reject_tmax need to be converted to samples to
         # check the reject_by_annotation boundaries: reject_start, reject_stop

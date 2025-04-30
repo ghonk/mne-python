@@ -803,6 +803,46 @@ def test_reject_by_annotations_reject_tmin_reject_tmax():
     assert len(epochs) == 1
 
 
+def test_epochs_out_of_bounds_warning():
+    """Test warning and dropping when epoch window is out of bounds."""
+    data = np.random.randn(2, 1000)
+    info = mne.create_info(ch_names=["A", "B"], sfreq=100, ch_types="eeg")
+    # Set first_samp so that first event is before raw data start,
+    # and last event is after raw data end.
+    # raw.n_times is 1000, so last_samp = 150 + 1000 - 1 = 1149
+    raw = mne.io.RawArray(data, info, first_samp=150)
+    events = np.array([[50, 0, 1], [500, 0, 2], [1200, 0, 3]])
+    event_id = {"cond1": 1, "cond2": 2, "cond3": 3}
+    tmin, tmax = 0, 0.1  # Epoch duration 100ms
+
+    with pytest.warns(RuntimeWarning, match="out of bounds") as record:
+        epochs = mne.Epochs(
+            raw,
+            events=events,
+            event_id=event_id,
+            tmin=tmin,
+            tmax=tmax,
+            baseline=None,
+            preload=False,
+        )
+        # drop_bad triggers the epoch data loading and the warning
+        epochs.drop_bad()
+
+    # Check that two warnings were emitted (one for each bad epoch)
+    assert len(record) == 2
+    assert "Epoch index 0 (event sample 50) is out of bounds" in str(record[0].message)
+    assert "Epoch index 2 (event sample 1200) is out of bounds" in str(record[1].message)
+
+    # Check that only the valid epoch remains
+    assert len(epochs) == 1
+    assert epochs.events[0, 2] == 2  # Event ID 2 should be the one kept
+
+    # Check the drop log
+    assert "BAD_EPOCH_WINDOW" in epochs.drop_log[0]
+    assert epochs.drop_log[1] == ()
+    assert "BAD_EPOCH_WINDOW" in epochs.drop_log[2]
+
+
 def test_own_data():
     """Test for epochs data ownership (gh-5346)."""
     raw, events = _get_data()[:2]
